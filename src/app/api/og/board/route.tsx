@@ -1,6 +1,4 @@
 import { ImageResponse } from "next/og";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
 export const runtime = "edge";
 export const contentType = "image/png";
@@ -10,9 +8,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const boardId = searchParams.get("id");
 
-  // Fallback data if no board found
-  let eraName      = "Find Your Era";
-  let bio          = "discover your current aesthetic era";
+  // Fallback data
+  let eraName = "Find Your Era";
+  let bio = "discover your current aesthetic era";
   let aestheticName = "EraBoard";
   let colors: string[] = ["#c084fc", "#a855f7", "#67e8f9", "#f0abfc", "#fda4af"];
   let heroImage: string | null = null;
@@ -20,41 +18,47 @@ export async function GET(request: Request) {
 
   if (boardId) {
     try {
-      const cookieStore = await cookies();
-      const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)!,
+      // Use Supabase REST API directly — no @supabase/ssr, no next/headers
+      // This works fine on edge runtime
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = (
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+      )!;
+
+      const res = await fetch(
+        `${supabaseUrl}/rest/v1/boards?board_id=eq.${boardId}&select=era_name,bio,aesthetic_name,colors,images&limit=1`,
         {
-          cookies: {
-            getAll: () => cookieStore.getAll(),
-            setAll: () => {},
+          headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
+            "Content-Type": "application/json",
           },
         }
       );
 
-      const { data } = await supabase
-        .from("boards")
-        .select("era_name, bio, aesthetic_name, colors, images")
-        .eq("board_id", boardId)
-        .single();
+      if (res.ok) {
+        const rows = await res.json();
+        const data = rows?.[0];
 
-      if (data) {
-        eraName       = data.era_name;
-        bio           = data.bio;
-        aestheticName = data.aesthetic_name;
-        colors        = data.colors ?? colors;
-        images        = data.images ?? [];
-        heroImage     = images[0] ?? null;
+        if (data) {
+          eraName = data.era_name ?? eraName;
+          bio = data.bio ?? bio;
+          aestheticName = data.aesthetic_name ?? aestheticName;
+          colors = data.colors ?? colors;
+          images = data.images ?? [];
+          heroImage = images[0] ?? null;
+        }
       }
     } catch (err) {
-      console.error("[og/board] Error:", err);
+      console.error("[og/board] fetch error:", err);
     }
   }
 
   const primary = colors[0] ?? "#c084fc";
-  const accent  = colors[2] ?? "#67e8f9";
+  const accent = colors[2] ?? "#67e8f9";
   const gridImages = images.slice(1, 5);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://eraboard.vercel.app";
 
   return new ImageResponse(
     (
@@ -69,7 +73,7 @@ export async function GET(request: Request) {
           fontFamily: "sans-serif",
         }}
       >
-        {/* Left side — hero image */}
+        {/* Left — hero image */}
         <div
           style={{
             width: "460px",
@@ -96,7 +100,6 @@ export async function GET(request: Request) {
               }}
             />
           )}
-          {/* Gradient overlay */}
           <div
             style={{
               position: "absolute",
@@ -106,7 +109,7 @@ export async function GET(request: Request) {
           />
         </div>
 
-        {/* Right side — content */}
+        {/* Right — content */}
         <div
           style={{
             flex: 1,
@@ -116,10 +119,10 @@ export async function GET(request: Request) {
             justifyContent: "space-between",
           }}
         >
-          {/* Top — logo */}
+          {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <img
-              src={`${process.env.NEXT_PUBLIC_APP_URL}/icon.svg`}
+              src={`${appUrl}/icon.svg`}
               width={32}
               height={32}
               alt="EraBoard"
@@ -130,7 +133,7 @@ export async function GET(request: Request) {
             </span>
           </div>
 
-          {/* Middle — era info */}
+          {/* Era info */}
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {/* Aesthetic badge */}
             <div
@@ -172,16 +175,16 @@ export async function GET(request: Request) {
                 fontSize: "20px",
                 color: "#a09ab8",
                 lineHeight: 1.5,
+                overflow: "hidden",
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: "vertical",
-                overflow: "hidden",
               }}
             >
               {bio}
             </div>
 
-            {/* Mini image grid */}
+            {/* Mini grid */}
             {gridImages.length > 0 && (
               <div style={{ display: "flex", gap: "6px", marginTop: "4px" }}>
                 {gridImages.map((img, i) => (
@@ -197,7 +200,7 @@ export async function GET(request: Request) {
               </div>
             )}
 
-            {/* Color palette */}
+            {/* Color dots */}
             <div style={{ display: "flex", gap: "8px" }}>
               {colors.slice(0, 5).map((c, i) => (
                 <div
@@ -214,7 +217,7 @@ export async function GET(request: Request) {
             </div>
           </div>
 
-          {/* Bottom — CTA */}
+          {/* CTA */}
           <div
             style={{
               display: "flex",
@@ -228,7 +231,7 @@ export async function GET(request: Request) {
             }}
           >
             <span style={{ color: primary, fontSize: "15px", fontWeight: 600 }}>
-              ✦ find your era at eraboard
+              ✦ find your era at eraboard.vercel.app
             </span>
           </div>
         </div>

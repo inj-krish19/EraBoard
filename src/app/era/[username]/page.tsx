@@ -9,23 +9,32 @@ interface Props {
     params: Promise<{ username: string }>;
 }
 
+interface ProfileRow {
+    id: string;
+    username: string | null;
+    display_name: string | null;
+    avatar_url: string | null;
+}
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://eraboard.vercel.app";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { username } = await params;
     const supabase = await createClient();
 
-    const { data: profile } = await supabase
+    const { data } = await supabase
         .from("profiles")
         .select("display_name, username")
         .eq("username", username)
         .single();
 
+    const profile = data as { display_name: string | null; username: string | null } | null;
+
     if (!profile) return { title: "Era not found | EraBoard" };
 
     const name = profile.display_name ?? username;
 
-    // Use the latest board OG image for the profile page
+    // Use the latest public board OG image for this profile
     const { data: latestBoard } = await supabase
         .from("boards")
         .select("board_id")
@@ -35,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         .single();
 
     const ogImage = latestBoard
-        ? `${APP_URL}/api/og/board?id=${latestBoard.board_id}`
+        ? `${APP_URL}/api/og/board?id=${(latestBoard as { board_id: string }).board_id}`
         : `${APP_URL}/og-image.png`;
 
     return {
@@ -60,11 +69,13 @@ export default async function EraPage({ params }: Props) {
     const { username } = await params;
     const supabase = await createClient();
 
-    const { data: profile } = await supabase
+    const { data } = await supabase
         .from("profiles")
         .select("id, username, display_name, avatar_url")
         .eq("username", username)
         .single();
+
+    const profile = data as ProfileRow | null;
 
     if (!profile) notFound();
 
@@ -82,7 +93,7 @@ export default async function EraPage({ params }: Props) {
             <main className="relative z-10 min-h-screen pt-24 pb-20 px-4">
                 <EraProfileClient
                     profile={profile}
-                    boards={boards ?? []}
+                    boards={(boards ?? []) as any}
                     username={username}
                 />
             </main>
