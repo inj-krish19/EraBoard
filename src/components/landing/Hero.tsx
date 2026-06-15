@@ -2,8 +2,9 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { SplitText, BlurIn } from "@/components/shared/Animations";
+import Image from "next/image";
 
 /* Floating aesthetic pill badges */
 const PILLS = [
@@ -32,7 +33,7 @@ const PREVIEW_CARDS = [
         delay: 0.75,
     },
     {
-        img: "https://images.unsplash.com/photo-1490750967868-88df5691cc27?w=300&q=80",
+        img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300&q=80",
         rotate: 8,
         x: 180,
         y: 10,
@@ -46,7 +47,7 @@ export function Hero() {
             {/* ── Badge ── */}
             <BlurIn delay={0.1} className="mb-6">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 bg-primary/5 font-ui text-xs text-primary tracking-widest uppercase">
-                    <Sparkles className="w-3 h-3" />
+                    <Image src="/icon.svg" width={12} height={12} alt="EraBoard" />
                     aesthetic quiz · moodboard generator
                 </div>
             </BlurIn>

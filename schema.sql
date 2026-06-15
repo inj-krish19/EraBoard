@@ -122,3 +122,15 @@ create policy "boards: own update"
 create policy "boards: own delete"
   on public.boards for delete
   using (auth.uid() = user_id);
+
+
+-- ─────────────────────────────────────────────────────────
+-- EraBoard — Migration: add affirmation, era_month, playlist
+-- Run in: Supabase Dashboard → SQL Editor
+-- ─────────────────────────────────────────────────────────
+ 
+alter table public.boards
+  add column if not exists affirmation  text,
+  add column if not exists era_month    text,
+  add column if not exists playlist     text;
+ 

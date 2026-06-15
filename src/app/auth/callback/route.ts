@@ -8,7 +8,6 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? "/";
 
   if (!code) {
-    console.error("[Auth Callback] No code in URL");
     return NextResponse.redirect(`${origin}/?auth=error`);
   }
 
@@ -16,18 +15,15 @@ export async function GET(request: Request) {
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        },
+        getAll: () => cookieStore.getAll(),
+        setAll: (s) =>
+          s.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          ),
       },
     }
   );
@@ -35,10 +31,25 @@ export async function GET(request: Request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    console.error("[Auth Callback] exchangeCodeForSession error:", error.message);
+    console.error("[Auth Callback] error:", error.message);
     return NextResponse.redirect(`${origin}/?auth=error`);
   }
 
-  console.log("[Auth Callback] Session exchanged successfully");
+  // Check if user has a username set
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username")
+      .eq("id", user.id)
+      .single();
+
+    // New user — no username yet → send to setup
+    if (!profile?.username) {
+      return NextResponse.redirect(`${origin}/setup`);
+    }
+  }
+
   return NextResponse.redirect(`${origin}${next}`);
 }

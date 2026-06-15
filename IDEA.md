@@ -79,7 +79,7 @@ This is the most important part — shareability is baked in by design:
 2. **Aesthetic algorithm** — maps answers to aesthetic profiles (you define ~15–20 aesthetics)
 3. **Board generator** — pulls curated images per aesthetic, assembles the card
 4. **Export card** — download as image, share to Instagram stories natively
-5. **"My Era" page** — shareable public link like `aestheticboard.app/era/username`
+5. **"My Era" page** — shareable public link like `eraboard.vercel.app/era/username`
 
 ---
 

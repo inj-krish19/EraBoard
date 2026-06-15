@@ -1,8 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Sparkles } from "lucide-react";
+import { X } from "lucide-react";
 import { GoogleSignInButton } from "./GoogleSignInButton";
+import Image from "next/image";
 
 interface AuthModalProps {
     open: boolean;
@@ -66,7 +67,7 @@ export function AuthModal({
 
                             {/* Icon */}
                             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center glow-purple mb-5">
-                                <Sparkles className="w-6 h-6 text-black" />
+                                <Image src="/icon.svg" width={24} height={24} alt="EraBoard" className="text-black" />
                             </div>
 
                             {/* Content */}

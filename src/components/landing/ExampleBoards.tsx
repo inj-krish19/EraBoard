@@ -22,7 +22,7 @@ const BOARDS = [
         bio: "main character energy with a pastel filter on everything 🌸",
         colors: ["#fdf2f8", "#fce7f3", "#fbcfe8", "#f9a8d4", "#f472b6"],
         images: [
-            "https://images.unsplash.com/photo-1490750967868-88df5691cc27?w=200&q=80",
+            "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=200&q=80",
             "https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?w=200&q=80",
             "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200&q=80",
             "https://images.unsplash.com/photo-1502230831726-fe5549140034?w=200&q=80",
