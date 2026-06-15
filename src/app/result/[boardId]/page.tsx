@@ -1,3 +1,68 @@
-export default function Result() {
-    return (<></>);
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
+import { GlowBackground } from "@/components/shared/GlowBackground";
+import { Navbar } from "@/components/shared/Navbar";
+import { BoardDetailClient } from "@/components/era/BoardDetailClient";
+
+interface Props {
+    params: Promise<{ boardId: string }>;
+}
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://eraboard.vercel.app";
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const { boardId } = await params;
+    const supabase = await createClient();
+
+    const { data: board } = await supabase
+        .from("boards")
+        .select("era_name, bio, aesthetic_name")
+        .eq("board_id", boardId)
+        .single();
+
+    if (!board) return { title: "Board not found | EraBoard" };
+
+    const ogImage = `${APP_URL}/api/og/board?id=${boardId}`;
+
+    return {
+        title: `${board.era_name} | EraBoard`,
+        description: board.bio,
+        openGraph: {
+            title: board.era_name,
+            description: `${board.aesthetic_name} · ${board.bio}`,
+            url: `${APP_URL}/result/${boardId}`,
+            images: [{ url: ogImage, width: 1200, height: 630, alt: board.era_name }],
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: board.era_name,
+            description: board.bio,
+            images: [ogImage],
+        },
+    };
+}
+
+export default async function BoardDetailPage({ params }: Props) {
+    const { boardId } = await params;
+    const supabase = await createClient();
+
+    const { data: board } = await supabase
+        .from("boards")
+        .select("*, profiles(username, display_name, avatar_url)")
+        .eq("board_id", boardId)
+        .eq("is_public", true)
+        .single();
+
+    if (!board) notFound();
+
+    return (
+        <>
+            <GlowBackground />
+            <Navbar />
+            <main className="relative z-10 min-h-screen pt-24 pb-20 px-4">
+                <BoardDetailClient board={board} boardId={boardId} />
+            </main>
+        </>
+    );
 }
