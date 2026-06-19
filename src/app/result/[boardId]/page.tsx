@@ -1,9 +1,11 @@
+// src/app/result/[boardId]/page.tsx
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { GlowBackground } from "@/components/shared/GlowBackground";
 import { Navbar } from "@/components/shared/Navbar";
 import { BoardDetailClient } from "@/components/era/BoardDetailClient";
+import ViewTracker from "@/components/board/ViewTracker";
 
 interface Props {
     params: Promise<{ boardId: string }>;
@@ -35,7 +37,8 @@ interface BoardFull {
     } | null;
 }
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://eraboard.vercel.app";
+const APP_URL =
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://eraboard.vercel.app";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { boardId } = await params;
@@ -90,6 +93,7 @@ export default async function BoardDetailPage({ params }: Props) {
         <>
             <GlowBackground />
             <Navbar />
+            <ViewTracker boardId={boardId} />
             <main className="relative z-10 min-h-screen pt-24 pb-20 px-4">
                 <BoardDetailClient board={board} boardId={boardId} />
             </main>

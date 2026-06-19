@@ -1,8 +1,18 @@
+// src/components/auth/UserMenu.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, User, Sparkles, ExternalLink, Settings } from "lucide-react";
+import {
+    LogOut,
+    User,
+    Sparkles,
+    ExternalLink,
+    Settings,
+    Compass,
+    ArrowLeftRight,
+    Info,
+} from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -46,7 +56,10 @@ export function UserMenu() {
     if (!user) return null;
 
     const avatar = user.user_metadata?.avatar_url as string | undefined;
-    const name = profile?.display_name ?? (user.user_metadata?.full_name as string | undefined) ?? "you";
+    const name =
+        profile?.display_name ??
+        (user.user_metadata?.full_name as string | undefined) ??
+        "you";
     const initials = name.charAt(0).toUpperCase();
     const username = profile?.username;
 
@@ -56,6 +69,8 @@ export function UserMenu() {
         await supabase.auth.signOut();
         router.push("/");
     }
+
+    const close = () => setOpen(false);
 
     return (
         <div ref={ref} className="relative">
@@ -88,13 +103,17 @@ export function UserMenu() {
                     >
                         {/* User info */}
                         <div className="px-3 py-2.5 mb-1">
-                            <p className="font-ui text-xs font-semibold text-text-primary truncate">{name}</p>
+                            <p className="font-ui text-xs font-semibold text-text-primary truncate">
+                                {name}
+                            </p>
                             {username ? (
-                                <p className="font-ui text-[10px] text-text-muted truncate">@{username}</p>
+                                <p className="font-ui text-[10px] text-text-muted truncate">
+                                    @{username}
+                                </p>
                             ) : (
                                 <Link
                                     href="/setup"
-                                    onClick={() => setOpen(false)}
+                                    onClick={close}
                                     className="font-ui text-[10px] text-primary hover:opacity-80 transition-opacity"
                                 >
                                     + claim your @username
@@ -108,7 +127,7 @@ export function UserMenu() {
                         {username && (
                             <Link
                                 href={`/era/${username}`}
-                                onClick={() => setOpen(false)}
+                                onClick={close}
                                 className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all font-ui text-sm"
                             >
                                 <ExternalLink className="w-3.5 h-3.5" />
@@ -119,7 +138,7 @@ export function UserMenu() {
                         {/* My boards / profile */}
                         <Link
                             href="/profile"
-                            onClick={() => setOpen(false)}
+                            onClick={close}
                             className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all font-ui text-sm"
                         >
                             <User className="w-3.5 h-3.5" />
@@ -129,17 +148,51 @@ export function UserMenu() {
                         {/* New quiz */}
                         <Link
                             href="/quiz"
-                            onClick={() => setOpen(false)}
+                            onClick={close}
                             className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all font-ui text-sm"
                         >
                             <Sparkles className="w-3.5 h-3.5" />
                             new era quiz
                         </Link>
 
+                        <div className="h-px bg-border/40 my-1" />
+
+                        {/* Explore */}
+                        <Link
+                            href="/explore"
+                            onClick={close}
+                            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all font-ui text-sm"
+                        >
+                            <Compass className="w-3.5 h-3.5" />
+                            explore boards
+                        </Link>
+
+                        {/* Compare */}
+                        <Link
+                            href="/compare"
+                            onClick={close}
+                            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all font-ui text-sm"
+                        >
+                            <ArrowLeftRight className="w-3.5 h-3.5" />
+                            compare eras
+                        </Link>
+
+                        {/* About */}
+                        <Link
+                            href="/about"
+                            onClick={close}
+                            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all font-ui text-sm"
+                        >
+                            <Info className="w-3.5 h-3.5" />
+                            about
+                        </Link>
+
+                        <div className="h-px bg-border/40 my-1" />
+
                         {/* Settings */}
                         <Link
                             href="/profile?tab=settings"
-                            onClick={() => setOpen(false)}
+                            onClick={close}
                             className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-all font-ui text-sm"
                         >
                             <Settings className="w-3.5 h-3.5" />

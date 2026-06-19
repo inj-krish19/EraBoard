@@ -1,9 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { getTopTags, scoreQuiz, type QuizAnswers } from "@/lib/scoring";
 import { getAestheticById } from "@/lib/aesthetics-data";
 
-export async function POST(request: Request) {
+ 
+// ── Rate limit config ────────────────────────────────────────────────────────
+// 5 generations per IP per hour
+const RATE_LIMIT_CONFIG = { limit: 5, windowSec: 60 * 60 };
+
+export async function POST(request: NextRequest) {
   try {
+
+    const ip = getClientIp(request);
+    const rl = rateLimit(`generate-era:${ip}`, RATE_LIMIT_CONFIG);
+
+    if (!rl.success) {
+      const retryAfterSec = Math.ceil((rl.resetAt - Date.now()) / 1000);
+      return NextResponse.json(
+        { error: "Too many requests. You can generate up to 5 eras per hour.", retryAfter: retryAfterSec },
+        { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
+      );
+    }
+
     const body = await request.json();
     const answers: QuizAnswers = body.answers;
 
