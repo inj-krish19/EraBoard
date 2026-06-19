@@ -125,7 +125,7 @@ create policy "boards: own delete"
 
 
 -- ─────────────────────────────────────────────────────────
--- EraBoard — Migration: add affirmation, era_month, playlist
+-- EraBoard — Migration 1: add affirmation, era_month, playlist
 -- Run in: Supabase Dashboard → SQL Editor
 -- ─────────────────────────────────────────────────────────
  
@@ -134,3 +134,115 @@ alter table public.boards
   add column if not exists era_month    text,
   add column if not exists playlist     text;
  
+
+-- ─────────────────────────────────────────────────────────
+-- EraBoard — Migration 2: 
+-- Add view_count column to boards
+-- Run in: Supabase Dashboard → SQL Editor
+-- ─────────────────────────────────────────────────────────
+
+ALTER TABLE public.boards ADD COLUMN IF NOT EXISTS view_count integer DEFAULT 0;
+
+-- Create index for sorting by popularity
+CREATE INDEX IF NOT EXISTS boards_view_count_idx ON public.boards (view_count DESC NULLS LAST);
+
+-- RPC function for atomic view count increment
+CREATE OR REPLACE FUNCTION increment_view_count(p_board_id text)
+RETURNS void AS $$
+  UPDATE public.boards
+  SET view_count = COALESCE(view_count, 0) + 1
+  WHERE board_id = p_board_id;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- Grant execute to anon + authenticated
+GRANT EXECUTE ON FUNCTION increment_view_count(text) TO anon, authenticated;
+
+
+-- ============================================================
+-- EraBoard — Migration 3 (RLS Fix Migration)
+-- Run this in Supabase SQL Editor (Dashboard → SQL Editor → New query)
+-- ============================================================
+
+-- ── 1. PROFILES: allow anyone to read public profile fields ──────────────────
+-- Drop the restrictive owner-only read policy if it exists
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+
+-- Allow anyone (anon + authenticated) to read profiles
+CREATE POLICY "profiles_public_read"
+  ON public.profiles
+  FOR SELECT
+  USING (true);
+
+-- Keep owner-only UPDATE (don't change this)
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+
+CREATE POLICY "profiles_owner_update"
+  ON public.profiles
+  FOR UPDATE
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+-- Keep owner-only INSERT (triggered on signup)
+DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
+
+CREATE POLICY "profiles_owner_insert"
+  ON public.profiles
+  FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
+
+-- ── 2. BOARDS: make sure anon can read all public boards ─────────────────────
+-- Drop any overly restrictive select policies
+DROP POLICY IF EXISTS "Public boards are viewable by everyone" ON public.boards;
+DROP POLICY IF EXISTS "boards_select_public" ON public.boards;
+DROP POLICY IF EXISTS "Anyone can view public boards" ON public.boards;
+
+-- Allow anyone to read boards where is_public = true
+CREATE POLICY "boards_public_read"
+  ON public.boards
+  FOR SELECT
+  USING (is_public = true OR auth.uid() = user_id);
+
+-- Allow anon insert (quiz results saved before login)
+DROP POLICY IF EXISTS "boards_anon_insert" ON public.boards;
+DROP POLICY IF EXISTS "Anyone can insert boards" ON public.boards;
+
+CREATE POLICY "boards_anon_insert"
+  ON public.boards
+  FOR INSERT
+  WITH CHECK (true);
+
+-- Owner can update/delete their own boards
+DROP POLICY IF EXISTS "boards_owner_update" ON public.boards;
+DROP POLICY IF EXISTS "boards_owner_delete" ON public.boards;
+
+CREATE POLICY "boards_owner_update"
+  ON public.boards
+  FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "boards_owner_delete"
+  ON public.boards
+  FOR DELETE
+  USING (auth.uid() = user_id);
+
+
+-- ── 3. Make sure RLS is actually enabled on both tables ──────────────────────
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.boards ENABLE ROW LEVEL SECURITY;
+
+
+-- ── 4. Grant SELECT to anon role (needed for unauthenticated reads) ──────────
+GRANT SELECT ON public.profiles TO anon;
+GRANT SELECT ON public.boards TO anon;
+GRANT SELECT ON public.profiles TO authenticated;
+GRANT SELECT ON public.boards TO authenticated;
+
+
+-- ── 5. Verify — run these SELECTs after applying to confirm ─────────────────
+-- SELECT username, display_name FROM public.profiles LIMIT 5;
+-- SELECT board_id, aesthetic_name, profiles(username) FROM public.boards WHERE is_public = true LIMIT 5;
