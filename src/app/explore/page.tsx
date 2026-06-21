@@ -2,9 +2,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { Metadata } from "next";
 import ExploreClient from "@/components/explore/ExploreClient";
-import {GlowBackground} from "@/components/shared/GlowBackground";
-import {Navbar} from "@/components/shared/Navbar";
-import {Footer} from "@/components/shared/Footer";
+import { GlowBackground } from "@/components/shared/GlowBackground";
+import { Navbar } from "@/components/shared/Navbar";
+import { Footer } from "@/components/shared/Footer";
 
 export const metadata: Metadata = {
     title: "Explore Era Boards — EraBoard",
@@ -38,7 +38,8 @@ async function getInitialBoards() {
       profiles:user_id (
         username,
         display_name,
-        avatar_url
+        avatar_url,
+        avatar_type
       )
     `,
             { count: "exact" }

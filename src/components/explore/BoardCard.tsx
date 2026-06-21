@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { Eye, Sparkles } from "lucide-react";
+import { resolveAvatar, AvatarType } from "@/lib/avatars";
 
 interface BoardCardProps {
     board: {
@@ -21,6 +22,7 @@ interface BoardCardProps {
             username?: string;
             display_name?: string;
             avatar_url?: string;
+            avatar_type?: AvatarType | null;
         } | null;
     };
     index: number;
@@ -132,30 +134,37 @@ export default function BoardCard({ board, index }: BoardCardProps) {
                     )}
 
                     {/* Author — plain div, NOT a Link, to avoid hydration error from nested <a> */}
-                    {board.profiles?.username && (
-                        <div className="flex items-center gap-2 pt-3 border-t border-border/20">
-                            {board.profiles.avatar_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                    src={board.profiles.avatar_url}
-                                    alt={board.profiles.display_name || ""}
-                                    width={18}
-                                    height={18}
-                                    className="rounded-full w-[18px] h-[18px] object-cover"
-                                />
-                            ) : (
-                                <div className="w-[18px] h-[18px] rounded-full bg-surface-elevated border border-border/30 flex items-center justify-center flex-shrink-0">
-                                    <Sparkles className="w-2.5 h-2.5 text-text-muted" />
+                    {board.profiles?.username && (() => {
+                        const authorAvatar = resolveAvatar(
+                            board.profiles?.avatar_type ?? null,
+                            board.profiles?.avatar_url ?? null
+                        );
+                        return (
+                            <div className="flex items-center gap-2 pt-3 border-t border-border/20">
+                                <div className="w-[18px] h-[18px] rounded-full overflow-hidden flex-shrink-0 border border-border/30">
+                                    {authorAvatar ? (
+                                        <Image
+                                            src={authorAvatar}
+                                            alt={board.profiles?.display_name || ""}
+                                            width={18}
+                                            height={18}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-surface-elevated flex items-center justify-center">
+                                            <Sparkles className="w-2.5 h-2.5 text-text-muted" />
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                            <span
-                                className="font-ui text-[10px] text-text-muted"
-                                title={`@${board.profiles.username}`}
-                            >
-                                @{board.profiles.username}
-                            </span>
-                        </div>
-                    )}
+                                <span
+                                    className="font-ui text-[10px] text-text-muted"
+                                    title={`@${board.profiles.username}`}
+                                >
+                                    @{board.profiles.username}
+                                </span>
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
         </motion.div>

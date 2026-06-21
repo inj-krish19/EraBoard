@@ -7,6 +7,7 @@ import { Search, SlidersHorizontal, TrendingUp, Clock, X } from "lucide-react";
 import BoardCard from "./BoardCard";
 import AestheticFilter from "./AestheticFilter";
 import { BlurIn } from "@/components/shared/Animations";
+import { AvatarType } from "@/lib/avatars";
 
 interface Board {
     board_id: string;
@@ -22,6 +23,7 @@ interface Board {
         username?: string;
         display_name?: string;
         avatar_url?: string;
+        avatar_type?: AvatarType;
     } | null;
 }
 

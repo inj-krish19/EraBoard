@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   params.set("is_public", "eq.true");
   params.set(
     "select",
-    "board_id,aesthetic_name,era_name,bio,colors,images,tags,created_at,view_count,profiles:user_id(username,display_name,avatar_url)"
+    "board_id,aesthetic_name,era_name,bio,colors,images,tags,created_at,view_count,profiles:user_id(username,display_name,avatar_url,avatar_type)"
   );
 
   if (aesthetic && aesthetic !== "all") {
