@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   // Fetch profile by username
   const profile = await supabaseGet(
-    `profiles?username=eq.${encodeURIComponent(username)}&select=id,username,display_name,avatar_url&limit=1`
+    `profiles?username=eq.${encodeURIComponent(username)}&select=id,username,display_name,avatar_url,avatar_type&limit=1`
   );
 
   if (!profile) {
@@ -48,6 +48,7 @@ export async function GET(req: NextRequest) {
     username: profile.username,
     display_name: profile.display_name,
     avatar_url: profile.avatar_url,
+    avatar_type: profile.avatar_type,
     latest_board: board ?? null,
   });
 }

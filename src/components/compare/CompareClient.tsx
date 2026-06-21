@@ -5,13 +5,18 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, ArrowLeftRight, Sparkles, X, ExternalLink } from "lucide-react";
+import {
+    ArrowLeftRight, Sparkles, X, ExternalLink,
+    Flame, Heart, Zap, Orbit, Globe,
+} from "lucide-react";
 import { BlurIn } from "@/components/shared/Animations";
+import { resolveAvatar, AvatarType } from "@/lib/avatars";
 
 interface UserEra {
     username: string;
     display_name?: string;
     avatar_url?: string;
+    avatar_type?: AvatarType | null;
     latest_board?: {
         board_id: string;
         aesthetic_name: string;
@@ -44,18 +49,57 @@ function calculateCompatibility(a: UserEra, b: UserEra): number {
         b.latest_board.aesthetic_name.toLowerCase();
 
     const baseScore = Math.round((tagScore * 60 + (sameAesthetic ? 40 : 0)));
-    // Keep it feeling real — floor at 30
     return Math.max(30, Math.min(99, baseScore + 30));
 }
 
-function getCompatibilityLabel(score: number): { label: string; color: string; emoji: string } {
-    if (score >= 85) return { label: "Twin Flames", color: "text-purple-300", emoji: "🔮" };
-    if (score >= 70) return { label: "Aesthetic Soulmates", color: "text-cyan-300", emoji: "✨" };
-    if (score >= 55) return { label: "Vibe Aligned", color: "text-pink-300", emoji: "💫" };
-    if (score >= 40) return { label: "Opposite Energies", color: "text-amber-300", emoji: "⚡" };
-    return { label: "Parallel Universes", color: "text-white/60", emoji: "🌌" };
+interface CompatLabel {
+    label: string;
+    color: string;
+    Icon: React.ElementType;
 }
 
+function getCompatibilityLabel(score: number): CompatLabel {
+    if (score >= 85) return { label: "Twin Flames", color: "text-purple-300", Icon: Flame };
+    if (score >= 70) return { label: "Aesthetic Soulmates", color: "text-cyan-300", Icon: Heart };
+    if (score >= 55) return { label: "Vibe Aligned", color: "text-pink-300", Icon: Zap };
+    if (score >= 40) return { label: "Opposite Energies", color: "text-amber-300", Icon: Orbit };
+    return { label: "Parallel Universes", color: "text-white/60", Icon: Globe };
+}
+
+// ── Shared avatar helper ──────────────────────────────────────────────────────
+function UserAvatar({
+    user,
+    size,
+}: {
+    user: Pick<UserEra, "avatar_url" | "avatar_type" | "display_name" | "username">;
+    size: number;
+}) {
+    const src = resolveAvatar(user.avatar_type ?? null, user.avatar_url ?? null);
+    const dim = `${size}px`;
+
+    if (src) {
+        return (
+            <Image
+                src={src}
+                alt={user.display_name || user.username || ""}
+                width={size}
+                height={size}
+                className="rounded-full object-cover"
+                style={{ width: dim, height: dim }}
+            />
+        );
+    }
+    return (
+        <div
+            className="rounded-full bg-purple-500/30 flex items-center justify-center flex-shrink-0"
+            style={{ width: dim, height: dim }}
+        >
+            <Sparkles className="text-purple-300" style={{ width: size * 0.45, height: size * 0.45 }} />
+        </div>
+    );
+}
+
+// ── UserSearchInput ───────────────────────────────────────────────────────────
 function UserSearchInput({
     label,
     value,
@@ -107,13 +151,7 @@ function UserSearchInput({
                     animate={{ opacity: 1, y: 0 }}
                     className="mt-3 flex items-center gap-2"
                 >
-                    {user.avatar_url ? (
-                        <Image src={user.avatar_url} alt="" width={24} height={24} className="rounded-full" />
-                    ) : (
-                        <div className="w-6 h-6 rounded-full bg-purple-500/30 flex items-center justify-center">
-                            <Sparkles className="w-3 h-3 text-purple-300" />
-                        </div>
-                    )}
+                    <UserAvatar user={user} size={24} />
                     <span className="text-white/60 text-xs">{user.display_name || user.username}</span>
                     {user.latest_board && (
                         <span className="text-[10px] text-purple-300/60 bg-purple-500/10 border border-purple-500/20 rounded-full px-2 py-0.5">
@@ -126,6 +164,7 @@ function UserSearchInput({
     );
 }
 
+// ── EraPanel ─────────────────────────────────────────────────────────────────
 function EraPanel({ user, side }: { user: UserEra; side: "left" | "right" }) {
     const board = user.latest_board;
     if (!board) return null;
@@ -157,15 +196,9 @@ function EraPanel({ user, side }: { user: UserEra; side: "left" | "right" }) {
                 )}
 
                 <div className="p-5">
-                    {/* User */}
+                    {/* User row */}
                     <div className="flex items-center gap-2 mb-4">
-                        {user.avatar_url ? (
-                            <Image src={user.avatar_url} alt="" width={28} height={28} className="rounded-full" />
-                        ) : (
-                            <div className="w-7 h-7 rounded-full bg-purple-500/30 flex items-center justify-center">
-                                <Sparkles className="w-3.5 h-3.5 text-purple-300" />
-                            </div>
-                        )}
+                        <UserAvatar user={user} size={28} />
                         <div>
                             <p className="text-white/70 text-sm font-medium">
                                 {user.display_name || user.username}
@@ -226,6 +259,7 @@ function EraPanel({ user, side }: { user: UserEra; side: "left" | "right" }) {
     );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
 export default function CompareClient() {
     const [usernameA, setUsernameA] = useState("");
     const [usernameB, setUsernameB] = useState("");
@@ -236,6 +270,15 @@ export default function CompareClient() {
     const [errorA, setErrorA] = useState("");
     const [errorB, setErrorB] = useState("");
     const [compared, setCompared] = useState(false);
+
+    function swapUserNames() {
+        setUsernameA(usernameB);
+        setUsernameB(usernameA);
+        setUserA(userB);
+        setUserB(userA);
+        setErrorA(errorB);
+        setErrorB(errorA);
+    }
 
     const handleLookup = async (
         username: string,
@@ -255,21 +298,16 @@ export default function CompareClient() {
     const handleCompare = async () => {
         const promises = [];
         if (usernameA && !userA) {
-            promises.push(
-                handleLookup(usernameA, setUserA, setLoadingA, setErrorA)
-            );
+            promises.push(handleLookup(usernameA, setUserA, setLoadingA, setErrorA));
         }
         if (usernameB && !userB) {
-            promises.push(
-                handleLookup(usernameB, setUserB, setLoadingB, setErrorB)
-            );
+            promises.push(handleLookup(usernameB, setUserB, setLoadingB, setErrorB));
         }
         await Promise.all(promises);
         setCompared(true);
     };
 
-    const compatibility =
-        userA && userB ? calculateCompatibility(userA, userB) : null;
+    const compatibility = userA && userB ? calculateCompatibility(userA, userB) : null;
     const compatLabel = compatibility ? getCompatibilityLabel(compatibility) : null;
 
     return (
@@ -304,10 +342,14 @@ export default function CompareClient() {
                     onClear={() => { setUsernameA(""); setUserA(null); setErrorA(""); setCompared(false); }}
                 />
 
-                <div className="flex-shrink-0 pb-1 self-center sm:mb-0">
-                    <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                <div className="flex-shrink-0 self-center pb-1">
+                    <button
+                        onClick={swapUserNames}
+                        className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+                        title="Swap users"
+                    >
                         <ArrowLeftRight className="w-4 h-4 text-white/30" />
-                    </div>
+                    </button>
                 </div>
 
                 <UserSearchInput
@@ -347,7 +389,6 @@ export default function CompareClient() {
                                 transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
                                 className="relative w-28 h-28 mb-4"
                             >
-                                {/* Circle ring */}
                                 <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
                                     <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
                                     <motion.circle
@@ -373,9 +414,12 @@ export default function CompareClient() {
                                 </div>
                             </motion.div>
 
-                            <p className={`text-xl font-semibold ${compatLabel?.color}`} style={{ fontFamily: "var(--font-playfair)" }}>
-                                {compatLabel?.emoji} {compatLabel?.label}
-                            </p>
+                            {compatLabel && (
+                                <p className={`flex items-center gap-2 text-xl font-semibold ${compatLabel.color}`} style={{ fontFamily: "var(--font-playfair)" }}>
+                                    <compatLabel.Icon className="w-5 h-5" />
+                                    {compatLabel.label}
+                                </p>
+                            )}
                             <p className="text-white/40 text-sm mt-1">aesthetic compatibility</p>
                         </div>
 
