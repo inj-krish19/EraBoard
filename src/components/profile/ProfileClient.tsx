@@ -1,8 +1,10 @@
+// src/components/profile/ProfileClient.tsx
 "use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
     Sparkles, ExternalLink, Settings, Calendar,
@@ -11,12 +13,15 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { BlurIn, FadeUp, ScaleIn } from "@/components/shared/Animations";
 import { createClient } from "@/lib/supabase/client";
+import AvatarSettings from "@/components/profile/AvatarSettings";
+import { resolveAvatar, AvatarType } from "@/lib/avatars";
 
 interface Profile {
     id: string;
     username: string | null;
     display_name: string | null;
     avatar_url: string | null;
+    avatar_type: AvatarType | null;
 }
 
 interface Board {
@@ -99,7 +104,6 @@ function BoardCard({
                 </Link>
 
                 <div className="p-4">
-                    {/* Era name */}
                     <Link href={`/result/${board.board_id}`}>
                         <h3
                             className="font-display text-base font-bold mb-0.5 leading-tight hover:opacity-80 transition-opacity"
@@ -136,7 +140,6 @@ function BoardCard({
                         </div>
 
                         <div className="flex items-center gap-1">
-                            {/* Copy link */}
                             <button
                                 onClick={handleCopyLink}
                                 title="Copy share link"
@@ -148,7 +151,6 @@ function BoardCard({
                                 }
                             </button>
 
-                            {/* Toggle public */}
                             <button
                                 onClick={() => onTogglePublic(board.id, board.is_public)}
                                 title={board.is_public ? "Make private" : "Make public"}
@@ -160,7 +162,6 @@ function BoardCard({
                                 }
                             </button>
 
-                            {/* Delete */}
                             <button
                                 onClick={() => onDelete(board.id)}
                                 title="Delete board"
@@ -176,19 +177,25 @@ function BoardCard({
     );
 }
 
-export function ProfileClient({ user, profile, boards: initialBoards }: Props) {
+export function ProfileClient({ user, profile: initialProfile, boards: initialBoards }: Props) {
     const router = useRouter();
     const [boards, setBoards] = useState<Board[]>(initialBoards);
+    const [profile, setProfile] = useState<Profile | null>(initialProfile);
     const [tab, setTab] = useState<"boards" | "settings">("boards");
-    const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
+    const [displayName, setDisplayName] = useState(initialProfile?.display_name ?? "");
     const [savingName, setSavingName] = useState(false);
     const [nameSaved, setNameSaved] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
     const name = profile?.display_name ?? user.user_metadata?.full_name ?? "you";
     const username = profile?.username;
-    const avatar = profile?.avatar_url ?? user.user_metadata?.avatar_url;
     const primaryColor = boards[0]?.colors[0] ?? "#c084fc";
+
+    // Resolve avatar: era avatar takes priority over Google avatar
+    const resolvedAvatar = resolveAvatar(
+        profile?.avatar_type ?? null,
+        profile?.avatar_url ?? (user.user_metadata?.avatar_url as string | undefined) ?? null
+    );
 
     async function handleTogglePublic(boardId: string, current: boolean) {
         const supabase = createClient();
@@ -196,7 +203,6 @@ export function ProfileClient({ user, profile, boards: initialBoards }: Props) {
             .from("boards")
             .update({ is_public: !current })
             .eq("id", boardId);
-
         setBoards((prev) =>
             prev.map((b) => b.id === boardId ? { ...b, is_public: !current } : b)
         );
@@ -226,6 +232,7 @@ export function ProfileClient({ user, profile, boards: initialBoards }: Props) {
         });
         setSavingName(false);
         setNameSaved(true);
+        setProfile((p) => p ? { ...p, display_name: displayName } : p);
         setTimeout(() => setNameSaved(false), 2000);
     }
 
@@ -240,9 +247,14 @@ export function ProfileClient({ user, profile, boards: initialBoards }: Props) {
                         className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 border-2"
                         style={{ borderColor: `${primaryColor}40` }}
                     >
-                        {avatar ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                        {resolvedAvatar ? (
+                            <Image
+                                src={resolvedAvatar}
+                                alt={name}
+                                width={80}
+                                height={80}
+                                className="w-full h-full object-cover"
+                            />
                         ) : (
                             <div
                                 className="w-full h-full flex items-center justify-center font-display text-2xl font-bold"
@@ -276,7 +288,6 @@ export function ProfileClient({ user, profile, boards: initialBoards }: Props) {
                                 claim your @username
                             </Link>
                         )}
-
                         <p className="font-ui text-xs text-text-muted">
                             {boards.length} era{boards.length !== 1 ? "s" : ""} · {user.email}
                         </p>
@@ -331,7 +342,7 @@ export function ProfileClient({ user, profile, boards: initialBoards }: Props) {
                     >
                         {boards.length === 0 ? (
                             <div className="text-center py-20">
-                                <p className="text-5xl mb-4">🌙</p>
+                                <Settings className="w-10 h-10 text-text-muted mx-auto mb-4 opacity-40" />
                                 <p className="font-display text-2xl text-text-primary mb-2">no eras yet</p>
                                 <p className="font-body text-text-secondary mb-6">take the quiz to find your first era</p>
                                 <Link
@@ -345,7 +356,6 @@ export function ProfileClient({ user, profile, boards: initialBoards }: Props) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                 {boards.map((board, i) => (
                                     <div key={board.id} className="relative">
-                                        {/* Delete confirm overlay */}
                                         <AnimatePresence>
                                             {deleteConfirm === board.id && (
                                                 <motion.div
@@ -397,6 +407,18 @@ export function ProfileClient({ user, profile, boards: initialBoards }: Props) {
                         transition={{ duration: 0.2 }}
                         className="max-w-md space-y-5"
                     >
+                        {/* Avatar */}
+                        <div className="p-5 rounded-2xl glass border border-border/30">
+                            <AvatarSettings
+                                currentAvatarType={profile?.avatar_type ?? null}
+                                googleAvatarUrl={profile?.avatar_url ?? (user.user_metadata?.avatar_url as string | undefined) ?? null}
+                                username={username ?? name.charAt(0)}
+                                onSaved={(newType) =>
+                                    setProfile((p) => p ? { ...p, avatar_type: newType } : p)
+                                }
+                            />
+                        </div>
+
                         {/* Display name */}
                         <div className="p-5 rounded-2xl glass border border-border/30">
                             <p className="font-ui text-xs text-text-muted uppercase tracking-widest mb-3">display name</p>

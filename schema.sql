@@ -246,3 +246,24 @@ GRANT SELECT ON public.boards TO authenticated;
 -- ── 5. Verify — run these SELECTs after applying to confirm ─────────────────
 -- SELECT username, display_name FROM public.profiles LIMIT 5;
 -- SELECT board_id, aesthetic_name, profiles(username) FROM public.boards WHERE is_public = true LIMIT 5;
+
+
+-- ============================================================
+-- EraBoard — Migration 4 (RLS Fix Migration)
+-- Custom Avatar Migration
+-- ============================================================
+
+
+-- Add avatar_type to profiles
+-- NULL = using Google OAuth avatar (default)
+-- One of: 'cottagecore' | 'darkacademia' | 'y2k' | 'softgirl' | 'ethereal' | 'grunge' | 'coquette'
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS avatar_type text DEFAULT NULL;
+
+-- Optional: add a check constraint so only valid values are stored
+ALTER TABLE public.profiles
+  ADD CONSTRAINT profiles_avatar_type_check
+  CHECK (
+    avatar_type IS NULL OR
+    avatar_type IN ('cottagecore', 'darkacademia', 'y2k', 'softgirl', 'ethereal', 'grunge', 'coquette')
+  );
