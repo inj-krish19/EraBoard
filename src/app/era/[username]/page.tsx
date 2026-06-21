@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { GlowBackground } from "@/components/shared/GlowBackground";
 import { Navbar } from "@/components/shared/Navbar";
 import { EraProfileClient } from "@/components/era/EraProfileClient";
+import { AvatarType } from "@/lib/avatars";
 
 interface Props {
     params: Promise<{ username: string }>;
@@ -14,6 +15,7 @@ interface ProfileRow {
     username: string | null;
     display_name: string | null;
     avatar_url: string | null;
+    avatar_type: AvatarType | null;
 }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://eraboard.vercel.app";

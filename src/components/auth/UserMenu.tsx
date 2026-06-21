@@ -1,4 +1,3 @@
-// src/components/auth/UserMenu.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -14,13 +13,17 @@ import {
     Info,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "./AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { resolveAvatar, AvatarType } from "@/lib/avatars";
 
 interface ProfileData {
     username: string | null;
     display_name: string | null;
+    avatar_url: string | null;
+    avatar_type: AvatarType | null;
 }
 
 export function UserMenu() {
@@ -30,19 +33,17 @@ export function UserMenu() {
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const ref = useRef<HTMLDivElement>(null);
 
-    // Fetch profile to get username
     useEffect(() => {
         if (!user) return;
         const supabase = createClient();
         supabase
             .from("profiles")
-            .select("username, display_name")
+            .select("username, display_name, avatar_url, avatar_type")
             .eq("id", user.id)
             .single()
             .then(({ data }) => setProfile(data));
     }, [user]);
 
-    // Close on outside click
     useEffect(() => {
         function handler(e: MouseEvent) {
             if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -55,7 +56,9 @@ export function UserMenu() {
 
     if (!user) return null;
 
-    const avatar = user.user_metadata?.avatar_url as string | undefined;
+    const googleAvatar = profile?.avatar_url ?? (user.user_metadata?.avatar_url as string | undefined) ?? null;
+    const avatarSrc = resolveAvatar(profile?.avatar_type ?? null, googleAvatar);
+
     const name =
         profile?.display_name ??
         (user.user_metadata?.full_name as string | undefined) ??
@@ -80,9 +83,14 @@ export function UserMenu() {
                 className="flex items-center gap-2 group"
             >
                 <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/30 group-hover:border-primary/60 transition-colors">
-                    {avatar ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                    {avatarSrc ? (
+                        <Image
+                            src={avatarSrc}
+                            alt={name}
+                            width={32}
+                            height={32}
+                            className="w-full h-full object-cover"
+                        />
                     ) : (
                         <div className="w-full h-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-black text-xs font-ui font-bold">
                             {initials}
@@ -102,28 +110,44 @@ export function UserMenu() {
                         className="absolute right-0 top-11 w-56 rounded-2xl glass border border-border/40 p-2 z-50"
                     >
                         {/* User info */}
-                        <div className="px-3 py-2.5 mb-1">
-                            <p className="font-ui text-xs font-semibold text-text-primary truncate">
-                                {name}
-                            </p>
-                            {username ? (
-                                <p className="font-ui text-[10px] text-text-muted truncate">
-                                    @{username}
+                        <div className="px-3 py-2.5 mb-1 flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 border border-border/30">
+                                {avatarSrc ? (
+                                    <Image
+                                        src={avatarSrc}
+                                        alt={name}
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-black text-xs font-ui font-bold">
+                                        {initials}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="min-w-0">
+                                <p className="font-ui text-xs font-semibold text-text-primary truncate">
+                                    {name}
                                 </p>
-                            ) : (
-                                <Link
-                                    href="/setup"
-                                    onClick={close}
-                                    className="font-ui text-[10px] text-primary hover:opacity-80 transition-opacity"
-                                >
-                                    + claim your @username
-                                </Link>
-                            )}
+                                {username ? (
+                                    <p className="font-ui text-[10px] text-text-muted truncate">
+                                        @{username}
+                                    </p>
+                                ) : (
+                                    <Link
+                                        href="/setup"
+                                        onClick={close}
+                                        className="font-ui text-[10px] text-primary hover:opacity-80 transition-opacity"
+                                    >
+                                        + claim your @username
+                                    </Link>
+                                )}
+                            </div>
                         </div>
 
                         <div className="h-px bg-border/40 mb-1" />
 
-                        {/* Era page link */}
                         {username && (
                             <Link
                                 href={`/era/${username}`}
@@ -135,7 +159,6 @@ export function UserMenu() {
                             </Link>
                         )}
 
-                        {/* My boards / profile */}
                         <Link
                             href="/profile"
                             onClick={close}
@@ -145,7 +168,6 @@ export function UserMenu() {
                             my boards
                         </Link>
 
-                        {/* New quiz */}
                         <Link
                             href="/quiz"
                             onClick={close}
@@ -157,7 +179,6 @@ export function UserMenu() {
 
                         <div className="h-px bg-border/40 my-1" />
 
-                        {/* Explore */}
                         <Link
                             href="/explore"
                             onClick={close}
@@ -167,7 +188,6 @@ export function UserMenu() {
                             explore boards
                         </Link>
 
-                        {/* Compare */}
                         <Link
                             href="/compare"
                             onClick={close}
@@ -177,7 +197,6 @@ export function UserMenu() {
                             compare eras
                         </Link>
 
-                        {/* About */}
                         <Link
                             href="/about"
                             onClick={close}
@@ -189,7 +208,6 @@ export function UserMenu() {
 
                         <div className="h-px bg-border/40 my-1" />
 
-                        {/* Settings */}
                         <Link
                             href="/profile?tab=settings"
                             onClick={close}
@@ -201,7 +219,6 @@ export function UserMenu() {
 
                         <div className="h-px bg-border/40 my-1" />
 
-                        {/* Sign out */}
                         <button
                             onClick={handleSignOut}
                             className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-text-muted hover:text-warm hover:bg-warm/5 transition-all font-ui text-sm"

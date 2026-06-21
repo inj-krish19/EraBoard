@@ -1,15 +1,19 @@
+// src/components/era/EraProfileClient.tsx
 "use client";
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { Sparkles, Calendar, ArrowRight } from "lucide-react";
 import { BlurIn, FadeUp, ScaleIn } from "@/components/shared/Animations";
+import { resolveAvatar, AvatarType } from "@/lib/avatars";
 
 interface Profile {
     id: string;
     username: string | null;
     display_name: string | null;
     avatar_url: string | null;
+    avatar_type: AvatarType | null;
 }
 
 interface Board {
@@ -136,9 +140,7 @@ function BoardCard({ board, index, isLatest }: { board: Board; index: number; is
                     </div>
 
                     {/* Hover arrow */}
-                    <div
-                        className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
+                    <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="w-4 h-4" style={{ color: primaryColor }} />
                     </div>
                 </motion.div>
@@ -152,6 +154,9 @@ export function EraProfileClient({ profile, boards, username }: Props) {
     const latestBoard = boards[0];
     const primaryColor = latestBoard?.colors[0] ?? "#c084fc";
 
+    // Resolve era avatar over Google avatar
+    const resolvedAvatar = resolveAvatar(profile.avatar_type, profile.avatar_url);
+
     return (
         <div className="max-w-4xl mx-auto">
 
@@ -163,11 +168,12 @@ export function EraProfileClient({ profile, boards, username }: Props) {
                         className="w-20 h-20 rounded-full overflow-hidden border-2"
                         style={{ borderColor: `${primaryColor}50` }}
                     >
-                        {profile.avatar_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                                src={profile.avatar_url}
+                        {resolvedAvatar ? (
+                            <Image
+                                src={resolvedAvatar}
                                 alt={name}
+                                width={80}
+                                height={80}
                                 className="w-full h-full object-cover"
                             />
                         ) : (
@@ -213,12 +219,12 @@ export function EraProfileClient({ profile, boards, username }: Props) {
             {/* ── Boards ── */}
             {boards.length === 0 ? (
                 <FadeUp className="text-center py-20">
-                    <p className="text-6xl mb-4">🌙</p>
+                    <Sparkles className="w-10 h-10 text-text-muted mx-auto mb-4 opacity-40" />
                     <p className="font-display text-2xl text-text-primary mb-2">
                         no eras yet
                     </p>
                     <p className="font-body text-text-secondary">
-                        this girl hasn't found her era yet.
+                        this soul hasn&apos;t found their era yet.
                     </p>
                 </FadeUp>
             ) : (
@@ -247,7 +253,7 @@ export function EraProfileClient({ profile, boards, username }: Props) {
             {/* ── CTA for visitors ── */}
             <FadeUp delay={0.3} className="text-center mt-16 pt-10 border-t border-border/20">
                 <p className="font-body text-text-secondary mb-4">
-                    what's your era?
+                    what&apos;s your era?
                 </p>
                 <Link
                     href="/quiz"
