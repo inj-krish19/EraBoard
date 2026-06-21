@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { GlowBackground } from "@/components/shared/GlowBackground";
 import { Navbar } from "@/components/shared/Navbar";
 import { ProfileClient } from "@/components/profile/ProfileClient";
+import { AvatarType } from "@/lib/avatars";
 
 export const metadata: Metadata = {
     title: "My Profile | EraBoard",
@@ -15,11 +16,15 @@ export default async function ProfilePage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) redirect("/");
 
-    const { data: profile } = await supabase
+    const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
+
+    const profile = profileData
+        ? { ...profileData, avatar_type: profileData.avatar_type as AvatarType | null }
+        : null;
 
     const { data: boards } = await supabase
         .from("boards")

@@ -41,7 +41,14 @@ export function UserMenu() {
             .select("username, display_name, avatar_url, avatar_type")
             .eq("id", user.id)
             .single()
-            .then(({ data }) => setProfile(data));
+            .then(({ data }) => {
+
+                const profile = data
+                    ? { ...data, avatar_type: data.avatar_type as AvatarType | null }
+                    : null;
+
+                setProfile(profile)
+            });
     }, [user]);
 
     useEffect(() => {
