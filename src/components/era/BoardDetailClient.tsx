@@ -3,17 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, Sparkles, Music2, ExternalLink } from "lucide-react";
 import { BlurIn, FadeUp, ScaleIn } from "@/components/shared/Animations";
 import { MoodGrid } from "@/components/board/MoodGrid";
 import { ColorPalette } from "@/components/board/ColorPalette";
 import { EraCard } from "@/components/board/EraCard";
 import { ShareActions } from "@/components/board/ShareActions";
+import RefinedEraCard from "@/components/spotify/RefinedEraCard";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { createClient } from "@/lib/supabase/client";
+import { resolveAvatar, AvatarType } from "@/lib/avatars";
 
 interface BoardProfile {
     username: string | null;
     display_name: string | null;
     avatar_url: string | null;
+    avatar_type?: AvatarType | null;
+    user_id?: string | null;
 }
 
 interface Board {
@@ -29,6 +36,7 @@ interface Board {
     affirmation?: string | null;
     era_month?: string | null;
     profiles?: BoardProfile | null;
+    user_id?: string | null;
 }
 
 interface Props {
@@ -39,25 +47,26 @@ interface Props {
 export function BoardDetailClient({ board, boardId }: Props) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [revealed, setRevealed] = useState(false);
-
-    // Try to enrich board data from sessionStorage
-    // (set by QuizContainer right after generation — has affirmation, era_month etc)
     const [enriched, setEnriched] = useState<Board>(board);
 
+    // Spotify state — only relevant if viewer is the board owner
+    const { user } = useAuth();
+    const [isOwner, setIsOwner] = useState(false);
+    const [spotifyConnected, setSpotifyConnected] = useState(false);
+
+    // Enrich from sessionStorage (Gemini extras set by QuizContainer)
     useEffect(() => {
         const key = `era_result_${boardId}`;
         const stored = sessionStorage.getItem(key);
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
-                // Merge sessionStorage data (has Gemini extras) with DB data
                 setEnriched((prev) => ({
                     ...prev,
                     affirmation: parsed.affirmation ?? prev.affirmation,
                     era_month: parsed.era_month ?? prev.era_month,
                     playlist: parsed.playlist ?? prev.playlist,
                 }));
-                // Clean up after reading
                 sessionStorage.removeItem(key);
             } catch {
                 // ignore parse errors
@@ -66,10 +75,38 @@ export function BoardDetailClient({ board, boardId }: Props) {
         setTimeout(() => setRevealed(true), 300);
     }, [boardId]);
 
+    // Check ownership + Spotify connection
+    useEffect(() => {
+        if (!user) return;
+
+        const boardOwnerId = board.user_id ?? board.profiles?.user_id;
+        const ownerCheck = boardOwnerId === user.id;
+        setIsOwner(ownerCheck);
+
+        if (ownerCheck) {
+            // Fetch just spotify_connected_at — no tokens exposed to client
+            const supabase = createClient();
+            supabase
+                .from("profiles")
+                .select("spotify_connected_at")
+                .eq("id", user.id)
+                .single()
+                .then(({ data }) => {
+                    setSpotifyConnected(!!data?.spotify_connected_at);
+                });
+        }
+    }, [user, board.user_id, board.profiles?.user_id]);
+
     const b = enriched;
     const primaryColor = b.colors[0] ?? "#c084fc";
     const accentColor = b.colors[2] ?? "#67e8f9";
     const profile = b.profiles;
+
+    // Resolve profile avatar (era avatar takes priority over Google)
+    const profileAvatar = resolveAvatar(
+        profile?.avatar_type ?? null,
+        profile?.avatar_url ?? null
+    );
 
     const date = new Date(b.created_at).toLocaleDateString("en-US", {
         month: "long", day: "numeric", year: "numeric",
@@ -89,7 +126,7 @@ export function BoardDetailClient({ board, boardId }: Props) {
                             className="inline-flex items-center gap-2 font-ui text-sm text-text-muted hover:text-text-secondary transition-colors group"
                         >
                             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                            {profile.display_name ?? profile.username}'s eras
+                            {profile.display_name ?? profile.username}&apos;s eras
                         </Link>
                     ) : (
                         <Link
@@ -108,16 +145,17 @@ export function BoardDetailClient({ board, boardId }: Props) {
                 {/* Creator info */}
                 {profile && (
                     <div className="flex items-center justify-center gap-2 mb-5">
-                        {profile.avatar_url && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                                src={profile.avatar_url}
+                        {profileAvatar ? (
+                            <Image
+                                src={profileAvatar}
                                 alt={profile.display_name ?? ""}
-                                className="w-7 h-7 rounded-full object-cover border border-border/40"
+                                width={28}
+                                height={28}
+                                className="rounded-full object-cover border border-border/40"
                             />
-                        )}
+                        ) : null}
                         <span className="font-ui text-sm text-text-muted">
-                            {profile.display_name ?? profile.username}'s era
+                            {profile.display_name ?? profile.username}&apos;s era
                         </span>
                         {profile.username && (
                             <Link
@@ -242,6 +280,15 @@ export function BoardDetailClient({ board, boardId }: Props) {
                                 <p className="font-display text-lg text-text-primary">{b.era_month}</p>
                             </div>
                         )}
+
+                        {/* ── Spotify Refined Era ── */}
+                        {/* Shows to owner (full refine button) or visitors (soft connect prompt) */}
+                        <RefinedEraCard
+                            boardId={boardId}
+                            isSpotifyConnected={isOwner && spotifyConnected}
+                            primaryColor={primaryColor}
+                        />
+
                     </div>
                 </FadeUp>
             </div>
@@ -277,7 +324,7 @@ export function BoardDetailClient({ board, boardId }: Props) {
 
             {/* ── CTA ── */}
             <FadeUp delay={0.5} className="text-center mt-16 pt-10 border-t border-border/20">
-                <p className="font-body text-text-secondary mb-4">what's your era?</p>
+                <p className="font-body text-text-secondary mb-4">what&apos;s your era?</p>
                 <Link
                     href="/quiz"
                     className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-black font-ui font-semibold text-sm glow-strong hover:opacity-90 transition-opacity"

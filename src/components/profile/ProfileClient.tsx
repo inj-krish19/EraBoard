@@ -15,6 +15,7 @@ import { BlurIn, FadeUp, ScaleIn } from "@/components/shared/Animations";
 import { createClient } from "@/lib/supabase/client";
 import AvatarSettings from "@/components/profile/AvatarSettings";
 import { resolveAvatar, AvatarType } from "@/lib/avatars";
+import SpotifyConnect from "@/components/spotify/SpotifyConnect";
 
 interface Profile {
     id: string;
@@ -22,6 +23,7 @@ interface Profile {
     display_name: string | null;
     avatar_url: string | null;
     avatar_type: AvatarType | null;
+    spotify_connected_at: string | null;
 }
 
 interface Board {
@@ -407,6 +409,15 @@ export function ProfileClient({ user, profile: initialProfile, boards: initialBo
                         transition={{ duration: 0.2 }}
                         className="max-w-md space-y-5"
                     >
+
+                        {/* Spotify - Legal Issues Required */}
+                        {/* <div className="p-5 rounded-2xl glass border border-border/30">
+                            <SpotifyConnect
+                                isConnected={!!profile?.spotify_connected_at}
+                                connectedAt={profile?.spotify_connected_at}
+                            />
+                        </div> */}
+
                         {/* Avatar */}
                         <div className="p-5 rounded-2xl glass border border-border/30">
                             <AvatarSettings

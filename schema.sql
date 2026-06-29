@@ -267,3 +267,24 @@ ALTER TABLE public.profiles
     avatar_type IS NULL OR
     avatar_type IN ('cottagecore', 'darkacademia', 'y2k', 'softgirl', 'ethereal', 'grunge', 'coquette')
   );
+
+
+-- ============================================================
+-- EraBoard — Migration 5 (Spotify Integration)
+-- Spotify Integration Migration
+-- ============================================================
+
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS spotify_access_token  text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS spotify_refresh_token text DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS spotify_connected_at  timestamptz DEFAULT NULL;
+
+-- Tokens are sensitive — only the owner should read them
+-- The existing profiles_public_read policy only exposes safe columns
+-- so tokens won't leak through the public read policy as long as
+-- your select queries specify columns explicitly (not SELECT *).
+-- For extra safety, create a restrictive policy on token columns:
+
+
+-- No extra RLS needed — just never SELECT * on profiles from public routes.
+-- Always enumerate columns: select("id, username, display_name, avatar_url, avatar_type")

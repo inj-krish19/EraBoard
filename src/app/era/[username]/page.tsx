@@ -73,7 +73,7 @@ export default async function EraPage({ params }: Props) {
 
     const { data } = await supabase
         .from("profiles")
-        .select("id, username, display_name, avatar_url")
+        .select("id, username, display_name, avatar_url, avatar_type")
         .eq("username", username)
         .single();
 

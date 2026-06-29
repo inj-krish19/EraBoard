@@ -10,8 +10,9 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/a/**', // Allows all images under this path
       },
-    ]
-  }
+    ],
+  },
+  allowedDevOrigins: ['127.0.0.1'],
 };
 
 export default nextConfig;
